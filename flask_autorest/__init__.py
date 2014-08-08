@@ -18,7 +18,8 @@ AUTOREST_URL_PREFIX
 __version__ = '0.1.1'
 
 from flask.views import MethodView
-from flask import Blueprint
+from flask import Blueprint, jsonify, abort
+import dataset
 
 AUTOREST_BLUEPRINT_NAME = 'autorest'
 AUTOREST_URL_PREFIX = '/autorest'
@@ -62,12 +63,18 @@ class AutoRest(object):
                                 view_func=ResourceView.as_view(
                                     '%s_%s' % (db_name, tb_name),
                                     db_uri=db_uri,
-                                    pk_name=pk_name
+                                    tb_name=tb_name,
+                                    pk_name=pk_name,
                                 )
                 )
 
                 bp.add_url_rule('/%s/%s' % (db_name, tb_name),
-                                view_func=ResourceListView.as_view('%s_%s_list' % (db_name, tb_name), db_uri=db_uri))
+                                view_func=ResourceListView.as_view(
+                                    '%s_%s_list' % (db_name, tb_name),
+                                    db_uri=db_uri,
+                                    tb_name=tb_name,
+                                )
+                )
 
         return bp
 
@@ -76,13 +83,36 @@ class ResourceView(MethodView):
     """
     /resource/<id>
     """
-    def __init__(self, db_uri, pk_name):
+    def __init__(self, db_uri, tb_name, pk_name):
         super(ResourceView, self).__init__()
         self.db_uri = db_uri
+        self.tb_name = tb_name
         self.pk_name = pk_name
 
+    def get_tb(self):
+        return dataset.connect(self.db_uri)[self.tb_name]
+
+    def options(self):
+        tb = self.get_tb()
+
+        return jsonify(
+            columns=tb.columns
+        )
+
     def get(self, pk):
-        return str(pk)
+        tb = self.get_tb()
+
+        kwargs = {
+            self.pk_name: pk
+        }
+
+        obj = tb.find_one(**kwargs)
+        if not obj:
+            abort(404)
+            return
+        return jsonify(
+            **obj
+        )
 
 
 class ResourceListView(MethodView):
@@ -90,9 +120,18 @@ class ResourceListView(MethodView):
     /resource/
     """
 
-    def __init__(self, db_uri):
+    def __init__(self, db_uri, tb_name):
         super(ResourceListView, self).__init__()
         self.db_uri = db_uri
+        self.tb_name = tb_name
+
+    def get_tb(self):
+        return dataset.connect(self.db_uri)[self.tb_name]
 
     def get(self):
-        return 'list'
+        tb = self.get_tb()
+
+        obj_list = tb.find()
+        return jsonify(
+            obj_list=obj_list
+        )
