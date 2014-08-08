@@ -6,7 +6,7 @@ from flask_autorest import AutoRest
 DEBUG = True
 AUTOREST_SOURCES = {
     'test': {
-        'uri': 'mysql://root:@localhost/flask_dpl',
+        'uri': 'mysql://root:@localhost/test_stat',
         'tables': {
             'user': {
                 'pk': 'id',

@@ -3,7 +3,7 @@
 AUTOREST_SOURCES:
     {
         'test': {
-            'uri': 'mysql://root:@localhost/flask_dpl',
+            'uri': 'mysql://root:@localhost/test_stat',
             'tables': {
                 'user': {
                     'pk': 'id',
@@ -132,6 +132,7 @@ class ResourceListView(MethodView):
         tb = self.get_tb()
 
         obj_list = tb.find()
+        json_obj_list = [obj for obj in obj_list]
         return jsonify(
-            obj_list=obj_list
+            obj_list=json_obj_list
         )
