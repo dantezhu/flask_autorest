@@ -54,14 +54,20 @@ class AutoRest(object):
         bp = Blueprint(blueprint_name, __name__, url_prefix=url_prefix)
 
         for db_name, db_conf in sources.items():
-            for tb_name, tb_conf in db_conf.items():
+            db_uri = db_conf['uri']
+            for tb_name, tb_conf in db_conf['tables'].items():
                 pk_name = tb_conf.get('pk') or 'id'
 
                 bp.add_url_rule('/%s/%s/<pk>' % (db_name, tb_name),
-                                view_func=ResourceView.as_view('%s_%s' % (db_name, tb_name), pk_name=pk_name))
+                                view_func=ResourceView.as_view(
+                                    '%s_%s' % (db_name, tb_name),
+                                    db_uri=db_uri,
+                                    pk_name=pk_name
+                                )
+                )
 
                 bp.add_url_rule('/%s/%s' % (db_name, tb_name),
-                                view_func=ResourceView.as_view('%s_%s_list' % (db_name, tb_name)))
+                                view_func=ResourceListView.as_view('%s_%s_list' % (db_name, tb_name), db_uri=db_uri))
 
         return bp
 
@@ -70,8 +76,10 @@ class ResourceView(MethodView):
     """
     /resource/<id>
     """
-    def __init__(self, pk_name):
+    def __init__(self, db_uri, pk_name):
+        self.db_uri = db_uri
         self.pk_name = pk_name
+
         super(ResourceView, self).__init__()
 
     def get(self, pk):
@@ -82,6 +90,9 @@ class ResourceListView(MethodView):
     """
     /resource/
     """
+
+    def __init__(self, db_uri):
+        self.db_uri = db_uri
 
     def get(self):
         return 'list'
