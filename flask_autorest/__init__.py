@@ -77,10 +77,9 @@ class ResourceView(MethodView):
     /resource/<id>
     """
     def __init__(self, db_uri, pk_name):
+        super(ResourceView, self).__init__()
         self.db_uri = db_uri
         self.pk_name = pk_name
-
-        super(ResourceView, self).__init__()
 
     def get(self, pk):
         return str(pk)
@@ -92,6 +91,7 @@ class ResourceListView(MethodView):
     """
 
     def __init__(self, db_uri):
+        super(ResourceListView, self).__init__()
         self.db_uri = db_uri
 
     def get(self):
