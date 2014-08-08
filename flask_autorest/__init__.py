@@ -1,4 +1,19 @@
 # -*- coding: utf-8 -*-
+"""
+AUTOREST_SOURCES:
+    {
+        'test': {
+            'uri': 'mysql://root:@localhost/flask_dpl',
+            'tables': {
+                'user': {
+                    'pk': 'id',
+                }
+            }
+        }
+    }
+AUTOREST_BLUEPRINT_NAME
+AUTOREST_URL_PREFIX
+"""
 
 __version__ = '0.1.1'
 
@@ -24,8 +39,11 @@ class AutoRest(object):
         """
         安装到app上
         """
+        bp = self.create_blueprint(app)
 
-    def create_blueprint(self, app, sources):
+        app.register_blueprint(bp)
+
+    def create_blueprint(self, app):
         """
         生成一个blueprint
         """
@@ -35,15 +53,35 @@ class AutoRest(object):
 
         bp = Blueprint(blueprint_name, __name__, url_prefix=url_prefix)
 
+        for db_name, db_conf in sources.items():
+            for tb_name, tb_conf in db_conf.items():
+                pk_name = tb_conf.get('pk') or 'id'
+
+                bp.add_url_rule('/%s/%s/<pk>' % (db_name, tb_name),
+                                view_func=ResourceView.as_view('%s_%s' % (db_name, tb_name), pk_name=pk_name))
+
+                bp.add_url_rule('/%s/%s' % (db_name, tb_name),
+                                view_func=ResourceView.as_view('%s_%s_list' % (db_name, tb_name)))
+
+        return bp
+
 
 class ResourceView(MethodView):
     """
     /resource/<id>
     """
-    pass
+    def __init__(self, pk_name):
+        self.pk_name = pk_name
+        super(ResourceView, self).__init__()
+
+    def get(self, pk):
+        return str(pk)
 
 
 class ResourceListView(MethodView):
     """
     /resource/
     """
+
+    def get(self):
+        return 'list'
