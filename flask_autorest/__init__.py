@@ -18,7 +18,7 @@ AUTOREST_URL_PREFIX
 __version__ = '0.1.1'
 
 from flask.views import MethodView
-from flask import Blueprint, jsonify, abort
+from flask import Blueprint, jsonify, abort, request
 import dataset
 
 AUTOREST_BLUEPRINT_NAME = 'autorest'
@@ -73,6 +73,7 @@ class AutoRest(object):
                                     '%s_%s_list' % (db_name, tb_name),
                                     db_uri=db_uri,
                                     tb_name=tb_name,
+                                    pk_name=pk_name,
                                 )
                 )
 
@@ -120,13 +121,21 @@ class ResourceListView(MethodView):
     /resource/
     """
 
-    def __init__(self, db_uri, tb_name):
+    def __init__(self, db_uri, tb_name, pk_name):
         super(ResourceListView, self).__init__()
         self.db_uri = db_uri
         self.tb_name = tb_name
+        self.pk_name = pk_name
 
     def get_tb(self):
         return dataset.connect(self.db_uri)[self.tb_name]
+
+    def options(self):
+        tb = self.get_tb()
+
+        return jsonify(
+            columns=tb.columns
+        )
 
     def get(self):
         tb = self.get_tb()
@@ -135,4 +144,22 @@ class ResourceListView(MethodView):
         json_obj_list = [obj for obj in obj_list]
         return jsonify(
             obj_list=json_obj_list
+        )
+
+    def post(self):
+        json_data = request.get_json(force=True)
+
+        tb = self.get_tb()
+        pk = tb.insert(json_data)
+
+        kwargs = {
+            self.pk_name: pk
+        }
+
+        obj = tb.find_one(**kwargs)
+        if not obj:
+            abort(404)
+            return
+        return jsonify(
+            **obj
         )
