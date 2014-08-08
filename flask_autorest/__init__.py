@@ -87,13 +87,6 @@ class ResourceView(MethodView):
         pk_name = tb.table.primary_key.columns.values()[0].name
         return tb, pk_name
 
-    def options(self):
-        tb, pk_name = self.get_tb()
-
-        return jsonify(
-            columns=tb.columns
-        )
-
     def get(self, pk):
         tb, pk_name = self.get_tb()
 
@@ -108,6 +101,38 @@ class ResourceView(MethodView):
         return jsonify(
             **obj
         )
+
+    def patch(self, pk):
+        json_data = request.get_json(force=True)
+        tb, pk_name = self.get_tb()
+
+        json_data.update({
+            pk_name: pk
+        })
+
+        tb.update(json_data, [pk_name])
+
+        kwargs = {
+            pk_name: pk
+        }
+
+        obj = tb.find_one(**kwargs)
+        if not obj:
+            abort(404)
+            return
+        return jsonify(
+            **obj
+        )
+
+    put = patch
+
+    def delete(self, pk):
+        tb, pk_name = self.get_tb()
+        kwargs = {
+            pk_name: pk
+        }
+
+        tb.delete(**kwargs)
 
 
 class ResourceListView(MethodView):
