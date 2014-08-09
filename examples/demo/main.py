@@ -12,7 +12,9 @@ AUTOREST_SOURCES = {
             'user': {
                 'per_page': 10,
                 'max_per_page': 15,
-            }
+            },
+            'user': {
+            },
         },
     }
 }
