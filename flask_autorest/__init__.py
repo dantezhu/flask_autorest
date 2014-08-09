@@ -16,7 +16,7 @@ AUTOREST_URL_PREFIX
 __version__ = '0.1.1'
 
 from flask.views import MethodView
-from flask import Blueprint, jsonify, abort, request
+from flask import Blueprint, jsonify, abort, request, Response
 import dataset
 
 AUTOREST_BLUEPRINT_NAME = 'autorest'
@@ -145,6 +145,8 @@ class ResourceView(MethodView):
 
         tb.delete(**kwargs)
 
+        return Response(status=204)
+
 
 class ResourceListView(MethodView):
     """
@@ -182,8 +184,9 @@ class ResourceListView(MethodView):
 
         obj_list = tb.find()
         json_obj_list = [obj for obj in obj_list]
+
         return jsonify(
-            obj_list=json_obj_list
+            objects=json_obj_list
         )
 
     def post(self, tb_name):
