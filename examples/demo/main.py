@@ -7,6 +7,11 @@ DEBUG = True
 AUTOREST_SOURCES = {
     'test': {
         'uri': 'mysql://root:@localhost/test_stat',
+        'engine_kwargs': {
+            'pool_size': 1,
+            'pool_recycle': -1,
+            'max_overflow': 0,
+        },
         'auth': ('admin', 'admin'),
         'tables': {
             'user': {
