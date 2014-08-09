@@ -4,6 +4,7 @@ AUTOREST_SOURCES:
     {
         'test': {
             'uri': 'mysql://root:@localhost/test_stat',
+            'auth': ('dantezhu', 'dantezhu'),
             'tables': ['user'],
             }
         }
@@ -52,23 +53,19 @@ class AutoRest(object):
         bp = Blueprint(blueprint_name, __name__, url_prefix=url_prefix)
 
         for db_name, db_conf in sources.items():
-            db_uri = db_conf['uri']
-            for tb_name in db_conf['tables']:
-                bp.add_url_rule('/%s/%s/<pk>' % (db_name, tb_name),
-                                view_func=ResourceView.as_view(
-                                    '%s_%s' % (db_name, tb_name),
-                                    db_uri=db_uri,
-                                    tb_name=tb_name,
-                                )
-                )
+            bp.add_url_rule('/%s/<tb_name>/<pk>' % db_name,
+                            view_func=ResourceView.as_view(
+                                '%s' % db_name,
+                                db_conf=db_conf,
+                            )
+            )
 
-                bp.add_url_rule('/%s/%s' % (db_name, tb_name),
-                                view_func=ResourceListView.as_view(
-                                    '%s_%s_list' % (db_name, tb_name),
-                                    db_uri=db_uri,
-                                    tb_name=tb_name,
-                                )
-                )
+            bp.add_url_rule('/%s/<tb_name>' % db_name,
+                            view_func=ResourceListView.as_view(
+                                '%s_list' % db_name,
+                                db_conf=db_conf,
+                            )
+            )
 
         return bp
 
@@ -77,18 +74,24 @@ class ResourceView(MethodView):
     """
     /resource/<id>
     """
-    def __init__(self, db_uri, tb_name):
+    def __init__(self, db_conf):
         super(ResourceView, self).__init__()
-        self.db_uri = db_uri
-        self.tb_name = tb_name
+        self.db_conf = db_conf
 
-    def get_tb(self):
-        tb = dataset.connect(self.db_uri)[self.tb_name]
+    def get_tb(self, tb_name):
+        if tb_name not in self.db_conf['tables']:
+            # 说明不存在
+            return None, None
+
+        tb = dataset.connect(self.db_conf['uri'])[tb_name]
         pk_name = tb.table.primary_key.columns.values()[0].name
         return tb, pk_name
 
-    def get(self, pk):
-        tb, pk_name = self.get_tb()
+    def get(self, tb_name, pk):
+        tb, pk_name = self.get_tb(tb_name)
+        if tb is None or pk_name is None:
+            abort(403)
+            return
 
         kwargs = {
             pk_name: pk
@@ -102,9 +105,13 @@ class ResourceView(MethodView):
             **obj
         )
 
-    def patch(self, pk):
+    def patch(self, tb_name, pk):
         json_data = request.get_json(force=True)
-        tb, pk_name = self.get_tb()
+
+        tb, pk_name = self.get_tb(tb_name)
+        if tb is None or pk_name is None:
+            abort(403)
+            return
 
         json_data.update({
             pk_name: pk
@@ -126,8 +133,12 @@ class ResourceView(MethodView):
 
     put = patch
 
-    def delete(self, pk):
-        tb, pk_name = self.get_tb()
+    def delete(self, tb_name, pk):
+        tb, pk_name = self.get_tb(tb_name)
+        if tb is None or pk_name is None:
+            abort(403)
+            return
+
         kwargs = {
             pk_name: pk
         }
@@ -140,25 +151,34 @@ class ResourceListView(MethodView):
     /resource/
     """
 
-    def __init__(self, db_uri, tb_name):
+    def __init__(self, db_conf):
         super(ResourceListView, self).__init__()
-        self.db_uri = db_uri
-        self.tb_name = tb_name
+        self.db_conf = db_conf
 
-    def get_tb(self):
-        tb = dataset.connect(self.db_uri)[self.tb_name]
+    def get_tb(self, tb_name):
+        if tb_name not in self.db_conf['tables']:
+            # 说明不存在
+            return None, None
+
+        tb = dataset.connect(self.db_conf['uri'])[tb_name]
         pk_name = tb.table.primary_key.columns.values()[0].name
         return tb, pk_name
 
-    def options(self):
-        tb, pk_name = self.get_tb()
+    def options(self, tb_name):
+        tb, pk_name = self.get_tb(tb_name)
+        if tb is None or pk_name is None:
+            abort(403)
+            return
 
         return jsonify(
             columns=tb.columns
         )
 
-    def get(self):
-        tb, pk_name = self.get_tb()
+    def get(self, tb_name):
+        tb, pk_name = self.get_tb(tb_name)
+        if tb is None or pk_name is None:
+            abort(403)
+            return
 
         obj_list = tb.find()
         json_obj_list = [obj for obj in obj_list]
@@ -166,10 +186,14 @@ class ResourceListView(MethodView):
             obj_list=json_obj_list
         )
 
-    def post(self):
+    def post(self, tb_name):
         json_data = request.get_json(force=True)
 
-        tb, pk_name = self.get_tb()
+        tb, pk_name = self.get_tb(tb_name)
+        if tb is None or pk_name is None:
+            abort(403)
+            return
+
         pk = tb.insert(json_data)
 
         kwargs = {
