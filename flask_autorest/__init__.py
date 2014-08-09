@@ -17,8 +17,6 @@ AUTOREST_SOURCES:
 AUTOREST_BLUEPRINT_NAME
 AUTOREST_URL_PREFIX
 
-per_page        不配置为-1，即不分页
-max_per_page    不配置为-1，即无限制
 """
 
 __version__ = '0.1.1'
@@ -66,14 +64,14 @@ class AutoRest(object):
         bp = Blueprint(blueprint_name, __name__, url_prefix=url_prefix)
 
         for db_name, db_conf in sources.items():
-            bp.add_url_rule('/%s/<tb_name>/<pk>/' % db_name,
+            bp.add_url_rule('/%s/<tb_name>/<pk>' % db_name,
                             view_func=ResourceView.as_view(
                                 '%s' % db_name,
                                 db_conf=db_conf,
                             )
             )
 
-            bp.add_url_rule('/%s/<tb_name>/' % db_name,
+            bp.add_url_rule('/%s/<tb_name>' % db_name,
                             view_func=ResourceListView.as_view(
                                 '%s_list' % db_name,
                                 db_conf=db_conf,

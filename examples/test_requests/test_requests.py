@@ -26,7 +26,7 @@ def test_post_user_list():
 
 
 def test_get_user():
-    rsp = requests.get(urljoin(BASE_URL, '/autorest/test/user/55'), auth=AUTH)
+    rsp = requests.get(urljoin(BASE_URL, '/autorest/test/user/55/'), auth=AUTH)
     assert rsp.ok, rsp.status_code
     print rsp.json()
 
