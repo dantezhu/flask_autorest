@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="flask_autorest",
-    version='0.1.1',
+    version='0.1.2',
     zip_safe=False,
     platforms='any',
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
