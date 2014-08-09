@@ -4,7 +4,7 @@ AUTOREST_SOURCES:
     {
         'test': {
             'uri': 'mysql://root:@localhost/test_stat',
-            'auth': ('dantezhu', 'dantezhu'),
+            'auth': ('admin', 'admin'),
             'tables': {
                     'user': {
                         'per_page': 10,
@@ -66,14 +66,14 @@ class AutoRest(object):
         bp = Blueprint(blueprint_name, __name__, url_prefix=url_prefix)
 
         for db_name, db_conf in sources.items():
-            bp.add_url_rule('/%s/<tb_name>/<pk>' % db_name,
+            bp.add_url_rule('/%s/<tb_name>/<pk>/' % db_name,
                             view_func=ResourceView.as_view(
                                 '%s' % db_name,
                                 db_conf=db_conf,
                             )
             )
 
-            bp.add_url_rule('/%s/<tb_name>' % db_name,
+            bp.add_url_rule('/%s/<tb_name>/' % db_name,
                             view_func=ResourceListView.as_view(
                                 '%s_list' % db_name,
                                 db_conf=db_conf,
@@ -99,7 +99,13 @@ class AutoRestMethodView(MethodView):
         return tb, pk_name
 
     def dispatch_request(self, *args, **kwargs):
-        # TODO auth验证支持
+        auth_conf = self.db_conf.get('auth')
+        if auth_conf:
+            if not request.authorization or \
+                            (request.authorization.username, request.authorization.password) != tuple(auth_conf):
+                # 权限验证失败
+                abort(403)
+                return
 
         return super(AutoRestMethodView, self).dispatch_request(*args, **kwargs)
 

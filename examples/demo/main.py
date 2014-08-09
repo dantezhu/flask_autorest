@@ -7,7 +7,7 @@ DEBUG = True
 AUTOREST_SOURCES = {
     'test': {
         'uri': 'mysql://root:@localhost/test_stat',
-        'auth': ('dantezhu', 'dantezhu'),
+        'auth': ('admin', 'admin'),
         'tables': {
             'user': {
                 'per_page': 10,
