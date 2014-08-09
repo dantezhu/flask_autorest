@@ -7,7 +7,8 @@ from urlparse import urljoin
 BASE_URL = 'http://127.0.0.1:5000/'
 AUTH = ('admin', 'admin')
 
-URL_PREFIX = '/autorest/test/user'
+URL_PREFIX = '/autorest/test/ds'
+
 
 def test_get_user_list():
     rsp = requests.get(urljoin(BASE_URL, URL_PREFIX), auth=AUTH)

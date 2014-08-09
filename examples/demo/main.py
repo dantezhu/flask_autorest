@@ -13,7 +13,7 @@ AUTOREST_SOURCES = {
                 'per_page': 10,
                 'max_per_page': 15,
             },
-            'user': {
+            'ds': {
             },
         },
     }
