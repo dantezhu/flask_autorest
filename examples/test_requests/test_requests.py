@@ -10,7 +10,8 @@ AUTH = ('admin', 'admin')
 
 def test_get_user_list():
     rsp = requests.get(urljoin(BASE_URL, '/autorest/test/user/'), auth=AUTH)
-    assert rsp.ok
+    assert rsp.ok, rsp.status_code
+    print rsp.json()
 
 
 def test_post_user_list():
@@ -20,12 +21,14 @@ def test_post_user_list():
         create_time='2014-03-3T03:3:3'
     )
     rsp = requests.post(urljoin(BASE_URL, '/autorest/test/user/'), auth=AUTH, data=json.dumps(json_data))
-    assert rsp.ok
+    assert rsp.ok, rsp.status_code
+    print rsp.json()
 
 
 def test_get_user():
     rsp = requests.get(urljoin(BASE_URL, '/autorest/test/user/55'), auth=AUTH)
-    assert rsp.ok
+    assert rsp.ok, rsp.status_code
+    print rsp.json()
 
 
 def test_put_user():
@@ -37,6 +40,7 @@ def test_put_user():
     # 注意最后的 /
     rsp = requests.put(urljoin(BASE_URL, '/autorest/test/user/55/'), auth=AUTH, data=json.dumps(json_data))
     assert rsp.ok, rsp.status_code
+    print rsp.json()
 
 
 def test_patch_user():
@@ -45,3 +49,4 @@ def test_patch_user():
         )
     rsp = requests.patch(urljoin(BASE_URL, '/autorest/test/user/55/'), auth=AUTH, data=json.dumps(json_data))
     assert rsp.ok, rsp.status_code
+    print rsp.json()
