@@ -8,9 +8,6 @@ from flask import current_app, request
 class DatetimeJSONEncoder(json.JSONEncoder):
     """可以序列化时间的JSON"""
 
-    DATE_FORMAT = "%Y-%m-%d"
-    TIME_FORMAT = "%H:%M:%S"
-
     def default(self, o):
         if isinstance(o, (datetime.datetime, datetime.date)):
             return o.isoformat()
