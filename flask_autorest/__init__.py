@@ -22,6 +22,7 @@ AUTOREST_URL_PREFIX
 __version__ = '0.1.1'
 
 from math import ceil
+import datetime
 from flask.views import MethodView
 from flask import Blueprint, jsonify, abort, request, Response
 import dataset
@@ -32,6 +33,19 @@ AUTOREST_URL_PREFIX = '/autorest'
 DEFAULT_PER_PAGE = 1000
 # -1 代表不限制
 DEFAULT_MAX_PER_PAGE = -1
+
+
+def autorest_jsonify(**kwargs):
+
+    result_dict = dict()
+
+    for k, v in kwargs.items():
+        if isinstance(v, (datetime.datetime, datetime.date)):
+            v = v.isoformat()
+
+        result_dict[k] = v
+
+    return jsonify(**result_dict)
 
 
 class AutoRest(object):
@@ -47,16 +61,9 @@ class AutoRest(object):
 
     def init_app(self, app):
         """
-        安装到app上
+        生成一个blueprint，安装到app上
         """
-        bp = self.create_blueprint(app)
 
-        app.register_blueprint(bp)
-
-    def create_blueprint(self, app):
-        """
-        生成一个blueprint
-        """
         blueprint_name = app.config.get('AUTOREST_BLUEPRINT_NAME') or AUTOREST_BLUEPRINT_NAME
         url_prefix = app.config.get('AUTOREST_URL_PREFIX') or AUTOREST_URL_PREFIX
         sources = app.config.get('AUTOREST_SOURCES')
@@ -78,7 +85,7 @@ class AutoRest(object):
                             )
             )
 
-        return bp
+        app.register_blueprint(bp)
 
 
 class AutoRestMethodView(MethodView):
@@ -126,7 +133,7 @@ class ResourceView(AutoRestMethodView):
         if not obj:
             abort(404)
             return
-        return jsonify(
+        return autorest_jsonify(
             **obj
         )
 
@@ -152,7 +159,7 @@ class ResourceView(AutoRestMethodView):
         if not obj:
             abort(404)
             return
-        return jsonify(
+        return autorest_jsonify(
             **obj
         )
 
@@ -184,7 +191,7 @@ class ResourceListView(AutoRestMethodView):
             abort(403)
             return
 
-        return jsonify(
+        return autorest_jsonify(
             columns=tb.columns
         )
 
@@ -212,7 +219,7 @@ class ResourceListView(AutoRestMethodView):
         obj_list = tb.find(_limit=per_page, _offset=(page-1)*per_page)
         json_obj_list = [obj for obj in obj_list]
 
-        return jsonify(
+        return autorest_jsonify(
             total=total,
             pages=pages,
             page=page,
@@ -238,6 +245,6 @@ class ResourceListView(AutoRestMethodView):
         if not obj:
             abort(404)
             return
-        return jsonify(
+        return autorest_jsonify(
             **obj
         )
