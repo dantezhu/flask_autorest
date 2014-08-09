@@ -5,22 +5,35 @@ AUTOREST_SOURCES:
         'test': {
             'uri': 'mysql://root:@localhost/test_stat',
             'auth': ('dantezhu', 'dantezhu'),
-            'tables': ['user'],
+            'tables': {
+                    'user': {
+                        'per_page': 10,
+                        'max_per_page': 100,
+                    }
+                },
             }
         }
     }
 AUTOREST_BLUEPRINT_NAME
 AUTOREST_URL_PREFIX
+
+per_page        不配置为-1，即不分页
+max_per_page    不配置为-1，即无限制
 """
 
 __version__ = '0.1.1'
 
+from math import ceil
 from flask.views import MethodView
 from flask import Blueprint, jsonify, abort, request, Response
 import dataset
 
 AUTOREST_BLUEPRINT_NAME = 'autorest'
 AUTOREST_URL_PREFIX = '/autorest'
+
+DEFAULT_PER_PAGE = 1000
+# -1 代表不限制
+DEFAULT_MAX_PER_PAGE = -1
 
 
 class AutoRest(object):
@@ -88,7 +101,7 @@ class AutoRestMethodView(MethodView):
     def dispatch_request(self, *args, **kwargs):
         # TODO auth验证支持
 
-        return super(AutoRestMethodView, self).dispatch_request()
+        return super(AutoRestMethodView, self).dispatch_request(*args, **kwargs)
 
 
 class ResourceView(AutoRestMethodView):
@@ -177,10 +190,29 @@ class ResourceListView(AutoRestMethodView):
             abort(403)
             return
 
-        obj_list = tb.find()
+        conf_per_page = self.db_conf['tables'][tb_name].get('per_page') or DEFAULT_PER_PAGE
+        conf_max_per_page = self.db_conf['tables'][tb_name].get('max_per_page', DEFAULT_MAX_PER_PAGE)
+
+        page = request.args.get('page', type=int) or 1
+        per_page = request.args.get('per_page', type=int)
+
+        if not per_page:
+            per_page = conf_per_page
+
+        if per_page > conf_max_per_page > 0:
+            per_page = conf_max_per_page
+
+        total = len(tb)
+        pages = int(ceil(total / float(per_page)))
+
+        obj_list = tb.find(_limit=per_page, _offset=(page-1)*per_page)
         json_obj_list = [obj for obj in obj_list]
 
         return jsonify(
+            total=total,
+            pages=pages,
+            page=page,
+            per_page=per_page,
             objects=json_obj_list
         )
 

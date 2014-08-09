@@ -8,7 +8,12 @@ AUTOREST_SOURCES = {
     'test': {
         'uri': 'mysql://root:@localhost/test_stat',
         'auth': ('dantezhu', 'dantezhu'),
-        'tables': ['user'],
+        'tables': {
+            'user': {
+                'per_page': 10,
+                'max_per_page': 15,
+            }
+        },
     }
 }
 
