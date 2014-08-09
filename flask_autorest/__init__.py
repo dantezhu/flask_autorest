@@ -4,6 +4,11 @@ AUTOREST_SOURCES:
     {
         'test': {
             'uri': 'mysql://root:@localhost/test_stat',
+            'engine_kwargs': {
+                'pool_size': 1,
+                'pool_recycle': -1,
+                'max_overflow': 0,
+            },
             'auth': ('admin', 'admin'),
             'tables': {
                     'user': {
@@ -26,9 +31,10 @@ import datetime
 from flask.views import MethodView
 from flask import Blueprint, jsonify, abort, request, Response
 import dataset
+from threading import Lock
 
-AUTOREST_BLUEPRINT_NAME = 'autorest'
-AUTOREST_URL_PREFIX = '/autorest'
+DEFAULT_BLUEPRINT_NAME = 'autorest'
+DEFAULT_URL_PREFIX = '/autorest'
 
 DEFAULT_PER_PAGE = 1000
 # -1 代表不限制
@@ -50,12 +56,18 @@ def autorest_jsonify(**kwargs):
 
 class AutoRest(object):
 
+    databases = None
+    db_alloc_lock = None
+
     def __init__(self, app=None):
         """init with app
 
         :app: Flask instance
 
         """
+        self.databases = dict()
+        self.db_alloc_lock = Lock()
+
         if app:
             self.init_app(app)
 
@@ -64,8 +76,8 @@ class AutoRest(object):
         生成一个blueprint，安装到app上
         """
 
-        blueprint_name = app.config.get('AUTOREST_BLUEPRINT_NAME') or AUTOREST_BLUEPRINT_NAME
-        url_prefix = app.config.get('AUTOREST_URL_PREFIX') or AUTOREST_URL_PREFIX
+        blueprint_name = app.config.get('AUTOREST_BLUEPRINT_NAME') or DEFAULT_BLUEPRINT_NAME
+        url_prefix = app.config.get('AUTOREST_URL_PREFIX') or DEFAULT_URL_PREFIX
         sources = app.config.get('AUTOREST_SOURCES')
 
         bp = Blueprint(blueprint_name, __name__, url_prefix=url_prefix)
@@ -74,6 +86,8 @@ class AutoRest(object):
             bp.add_url_rule('/%s/<tb_name>/<pk>' % db_name,
                             view_func=ResourceView.as_view(
                                 '%s' % db_name,
+                                autorset=self,
+                                db_name=db_name,
                                 db_conf=db_conf,
                             )
             )
@@ -81,6 +95,8 @@ class AutoRest(object):
             bp.add_url_rule('/%s/<tb_name>' % db_name,
                             view_func=ResourceListView.as_view(
                                 '%s_list' % db_name,
+                                autorset=self,
+                                db_name=db_name,
                                 db_conf=db_conf,
                             )
             )
@@ -90,8 +106,10 @@ class AutoRest(object):
 
 class AutoRestMethodView(MethodView):
 
-    def __init__(self, db_conf):
+    def __init__(self, autorest, db_name, db_conf):
         super(AutoRestMethodView, self).__init__()
+        self.autorest = autorest
+        self.db_name = db_name
         self.db_conf = db_conf
 
     def get_tb(self, tb_name):
@@ -99,7 +117,21 @@ class AutoRestMethodView(MethodView):
             # 说明不存在
             return None, None
 
-        tb = dataset.connect(self.db_conf['uri'])[tb_name]
+        uri = self.db_conf['uri']
+        db = self.autorest.databases.get(self.db_name)
+        if not db:
+            try:
+                self.autorest.db_alloc_lock.acquire()
+                db = self.autorest.databases.get(self.db_name)
+                if not db:
+                    db = self.autorest.databases[self.db_name] = dataset.connect(
+                        uri,
+                        engine_kwargs=self.db_conf.get('engine_kwargs')
+                    )
+            finally:
+                self.autorest.db_alloc_lock.release()
+
+        tb = db[tb_name]
         pk_name = tb.table.primary_key.columns.values()[0].name
         return tb, pk_name
 
