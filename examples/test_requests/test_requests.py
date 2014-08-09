@@ -10,6 +10,12 @@ AUTH = ('admin', 'admin')
 URL_PREFIX = '/autorest/test/ds'
 
 
+def test_options_user_list():
+    rsp = requests.options(urljoin(BASE_URL, URL_PREFIX), auth=AUTH)
+    assert rsp.ok, rsp.status_code
+    print rsp.json()
+
+
 def test_get_user_list():
     rsp = requests.get(urljoin(BASE_URL, URL_PREFIX), auth=AUTH)
     assert rsp.ok, rsp.status_code
