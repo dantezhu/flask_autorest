@@ -70,12 +70,10 @@ class AutoRest(object):
         return bp
 
 
-class ResourceView(MethodView):
-    """
-    /resource/<id>
-    """
+class AutoRestMethodView(MethodView):
+
     def __init__(self, db_conf):
-        super(ResourceView, self).__init__()
+        super(AutoRestMethodView, self).__init__()
         self.db_conf = db_conf
 
     def get_tb(self, tb_name):
@@ -87,6 +85,16 @@ class ResourceView(MethodView):
         pk_name = tb.table.primary_key.columns.values()[0].name
         return tb, pk_name
 
+    def dispatch_request(self, *args, **kwargs):
+        # TODO auth验证支持
+
+        return super(AutoRestMethodView, self).dispatch_request()
+
+
+class ResourceView(AutoRestMethodView):
+    """
+    /resource/<id>
+    """
     def get(self, tb_name, pk):
         tb, pk_name = self.get_tb(tb_name)
         if tb is None or pk_name is None:
@@ -148,23 +156,10 @@ class ResourceView(MethodView):
         return Response(status=204)
 
 
-class ResourceListView(MethodView):
+class ResourceListView(AutoRestMethodView):
     """
     /resource/
     """
-
-    def __init__(self, db_conf):
-        super(ResourceListView, self).__init__()
-        self.db_conf = db_conf
-
-    def get_tb(self, tb_name):
-        if tb_name not in self.db_conf['tables']:
-            # 说明不存在
-            return None, None
-
-        tb = dataset.connect(self.db_conf['uri'])[tb_name]
-        pk_name = tb.table.primary_key.columns.values()[0].name
-        return tb, pk_name
 
     def options(self, tb_name):
         tb, pk_name = self.get_tb(tb_name)
