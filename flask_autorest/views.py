@@ -18,9 +18,11 @@ class AutoRestMethodView(MethodView):
         self.db_conf = db_conf
 
     def get_tb(self, tb_name):
-        if tb_name not in self.db_conf['tables']:
+        tb_conf = self.db_conf['tables'].get(tb_name)
+
+        if tb_conf is None:
             # 说明不存在
-            return None, None
+            return None, None, None
 
         uri = self.db_conf['uri']
         db = self.autorest.databases.get(self.db_name)
@@ -36,9 +38,13 @@ class AutoRestMethodView(MethodView):
             finally:
                 self.autorest.db_alloc_lock.release()
 
+        if tb_name not in db.tables and \
+           not tb_conf.get('auto_fix', constants.DEFAULT_AUTO_FIX_TABLE):
+            return None, None, None
+
         tb = db[tb_name]
         pk_name = tb.table.primary_key.columns.values()[0].name
-        return tb, pk_name
+        return tb, pk_name, tb_conf
 
     def dispatch_request(self, *args, **kwargs):
         auth_conf = self.db_conf.get('auth')
@@ -57,7 +63,7 @@ class ResourceView(AutoRestMethodView):
     /resource/<id>
     """
     def get(self, tb_name, pk):
-        tb, pk_name = self.get_tb(tb_name)
+        tb, pk_name, tb_conf = self.get_tb(tb_name)
         if tb is None or pk_name is None:
             abort(403)
             return
@@ -77,16 +83,18 @@ class ResourceView(AutoRestMethodView):
     def patch(self, tb_name, pk):
         json_data = request.get_json(force=True)
 
-        tb, pk_name = self.get_tb(tb_name)
+        tb, pk_name, tb_conf = self.get_tb(tb_name)
         if tb is None or pk_name is None:
             abort(403)
             return
+
+        auto_fix_table = tb_conf.get('auto_fix', constants.DEFAULT_AUTO_FIX_TABLE)
 
         json_data.update({
             pk_name: pk
         })
 
-        tb.update(json_data, [pk_name])
+        tb.update(json_data, [pk_name], ensure=auto_fix_table)
 
         kwargs = {
             pk_name: pk
@@ -103,7 +111,7 @@ class ResourceView(AutoRestMethodView):
     put = patch
 
     def delete(self, tb_name, pk):
-        tb, pk_name = self.get_tb(tb_name)
+        tb, pk_name, tb_conf = self.get_tb(tb_name)
         if tb is None or pk_name is None:
             abort(403)
             return
@@ -123,7 +131,7 @@ class ResourceListView(AutoRestMethodView):
     """
 
     def options(self, tb_name):
-        tb, pk_name = self.get_tb(tb_name)
+        tb, pk_name, tb_conf = self.get_tb(tb_name)
         if tb is None or pk_name is None:
             abort(403)
             return
@@ -133,7 +141,7 @@ class ResourceListView(AutoRestMethodView):
         )
 
     def get(self, tb_name):
-        tb, pk_name = self.get_tb(tb_name)
+        tb, pk_name, tb_conf = self.get_tb(tb_name)
         if tb is None or pk_name is None:
             abort(403)
             return
@@ -167,12 +175,14 @@ class ResourceListView(AutoRestMethodView):
     def post(self, tb_name):
         json_data = request.get_json(force=True)
 
-        tb, pk_name = self.get_tb(tb_name)
+        tb, pk_name, tb_conf = self.get_tb(tb_name)
         if tb is None or pk_name is None:
             abort(403)
             return
 
-        pk = tb.insert(json_data)
+        auto_fix_table = tb_conf.get('auto_fix', constants.DEFAULT_AUTO_FIX_TABLE)
+
+        pk = tb.insert(json_data, ensure=auto_fix_table)
 
         kwargs = {
             pk_name: pk

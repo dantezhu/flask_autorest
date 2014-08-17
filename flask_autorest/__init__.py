@@ -14,6 +14,7 @@ AUTOREST_SOURCES:
                     'user': {
                         'per_page': 10,
                         'max_per_page': 100,
+                        'auto_fix': False,
                     }
                 },
             }
@@ -24,6 +25,6 @@ AUTOREST_URL_PREFIX
 
 """
 
-__version__ = '0.1.2'
+__version__ = '0.1.5'
 
 from .autorest import AutoRest
