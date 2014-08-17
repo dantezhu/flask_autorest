@@ -19,6 +19,7 @@ AUTOREST_SOURCES = {
                 'max_per_page': 15,
             },
             'ds': {
+                'auto_fix': False
             },
         },
     }
