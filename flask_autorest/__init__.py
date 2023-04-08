@@ -25,6 +25,6 @@ AUTOREST_URL_PREFIX
 
 """
 
-__version__ = '0.1.5'
+__version__ = '0.1.6'
 
 from .autorest import AutoRest
